@@ -3,6 +3,7 @@ A-lang is an open-source programming language created for codes that control sof
 
 example code:
 
+import example.lib.a
 x = 10;
 y = "hi";
 print(y);
@@ -15,3 +16,7 @@ door gcc hello.c -o hello
 
 if(x > 10)print("x e maior");else print("x e menor");
 while(x < 55){print("ele e maior");x = x - 1;
+
+
+
+the libs have to be in the lib folder,ok?
