@@ -851,11 +851,70 @@ int process_import(const char *filename, int interactive) {
     return 0;
 }
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#define MAX_LINE 1024
+
+// função para exportar/configurar/escrever em pinos GPIO
+void gpio_write(int pin, int value) {
+    char path[64];
+    FILE *f;
+
+    // exporta o pino (se não existir)
+    snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d", pin);
+    if (access(path, F_OK) != 0) {
+        f = fopen("/sys/class/gpio/export", "w");
+        if (f) {
+            fprintf(f, "%d", pin);
+            fclose(f);
+            usleep(100000); // espera 0.1s para sysfs criar o diretório
+        }
+    }
+
+    // define como saída
+    snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/direction", pin);
+    f = fopen(path, "w");
+    if (f) {
+        fprintf(f, "out");
+        fclose(f);
+    }
+
+    // escreve valor
+    snprintf(path, sizeof(path), "/sys/class/gpio/gpio%d/value", pin);
+    f = fopen(path, "w");
+    if (f) {
+        fprintf(f, "%d", value);
+        fclose(f);
+    }
+}
+
+// processa o comando "com <pin> <state>"
+void process_com(char *args) {
+    int pin;
+    char state[16];
+
+    if (sscanf(args, "%d %15s", &pin, state) == 2) {
+        if (strcasecmp(state, "high") == 0) {
+            gpio_write(pin, 1);
+            printf("[GPIO] Pino %d -> HIGH\n", pin);
+        } else if (strcasecmp(state, "low") == 0) {
+            gpio_write(pin, 0);
+            printf("[GPIO] Pino %d -> LOW\n", pin);
+        } else {
+            printf("Estado inválido: use 'high' ou 'low'\n");
+        }
+    } else {
+        printf("Uso: com <pino> <high|low>\n");
+    }
+}
+
 int main(int argc, char *argv[]) {
     char line[MAX_LINE];
 
     if (argc > 1) {
-        // modo arquivo: abre e executa
         FILE *f = fopen(argv[1], "r");
         if (!f) {
             perror("Error in open file");
@@ -865,13 +924,14 @@ int main(int argc, char *argv[]) {
             line[strcspn(line, "\n")] = 0;
             if (line[0] == 0) continue;
 
-            // detecta import
             if (strncmp(line, "import ", 7) == 0) {
                 process_import(line + 7, 0);
-            } 
-            // detecta door
+            }
             else if (strncmp(line, "door ", 5) == 0) {
-                system(line + 5); // executa o que vier depois do "door "
+                system(line + 5);
+            }
+            else if (strncmp(line, "com ", 4) == 0) {
+                process_com(line + 4);
             }
             else {
                 run_line(line, 0);
@@ -881,7 +941,6 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    // modo interativo
     printf("A version 6.75 ('exit' to quit).\n");
     for (;;) {
         printf(">>> ");
@@ -890,13 +949,14 @@ int main(int argc, char *argv[]) {
         if (strcmp(line, "exit") == 0) break;
         if (line[0] == 0) continue;
 
-        // detecta import
         if (strncmp(line, "import ", 7) == 0) {
             process_import(line + 7, 1);
-        } 
-        // detecta door
+        }
         else if (strncmp(line, "door ", 5) == 0) {
-            system(line + 5); // executa comando externo
+            system(line + 5);
+        }
+        else if (strncmp(line, "com ", 4) == 0) {
+            process_com(line + 4);
         }
         else {
             run_line(line, 1);
@@ -905,4 +965,3 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
-
