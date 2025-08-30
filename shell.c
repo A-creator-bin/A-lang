@@ -899,15 +899,15 @@ void process_com(char *args) {
     if (sscanf(args, "%d %15s", &pin, state) == 2) {
         if (strcasecmp(state, "high") == 0) {
             gpio_write(pin, 1);
-            printf("[GPIO] Pino %d -> HIGH\n", pin);
+            printf("[GPIO] Pin %d -> HIGH\n", pin);
         } else if (strcasecmp(state, "low") == 0) {
             gpio_write(pin, 0);
             printf("[GPIO] Pino %d -> LOW\n", pin);
         } else {
-            printf("Estado inválido: use 'high' ou 'low'\n");
+            printf("com error:invalid state'\n");
         }
     } else {
-        printf("Uso: com <pino> <high|low>\n");
+        printf("Uso: com <pin> <high|low>\n");
     }
 }
 
